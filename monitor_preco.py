@@ -5,6 +5,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 import csv
 import time
+from plyer import notification
+import smtplib
+from email.mime.text import MIMEText
+import json
 
 class MonitorPrecoKabum:
     def __init__(self):
@@ -18,6 +22,105 @@ class MonitorPrecoKabum:
         # URL do produto
         self.url = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
         
+        # Carregar último preço conhecido
+        self.ultimo_preco = self.carregar_ultimo_preco()
+        
+        # Configurações de email (adicione seus dados em config.json)
+        self.config = self.carregar_config()
+        
+    def carregar_config(self):
+        try:
+            with open('config.json', 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {
+                'email_remetente': '',
+                'email_senha': '',
+                'email_destinatario': '',
+                'preco_alvo': 0
+            }
+    
+    def carregar_ultimo_preco(self):
+        try:
+            with open('historico_precos.csv', 'r') as file:
+                linhas = list(csv.reader(file))
+                if len(linhas) > 0:
+                    return float(linhas[-1][1])
+        except (FileNotFoundError, IndexError):
+            return None
+            
+    def enviar_notificacao_desktop(self, titulo, mensagem):
+        notification.notify(
+            title=titulo,
+            message=mensagem,
+            app_icon=None,
+            timeout=10,
+        )
+        
+    def enviar_email(self, assunto, mensagem):
+        if not all([self.config['email_remetente'], 
+                   self.config['email_senha'], 
+                   self.config['email_destinatario']]):
+            return
+            
+        try:
+            msg = MIMEText(mensagem)
+            msg['Subject'] = assunto
+            msg['From'] = self.config['email_remetente']
+            msg['To'] = self.config['email_destinatario']
+            
+            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            server.login(self.config['email_remetente'], self.config['email_senha'])
+            server.send_message(msg)
+            server.quit()
+            
+        except Exception as e:
+            print(f"Erro ao enviar email: {str(e)}")
+    
+    def verificar_alteracao_preco(self, preco_atual):
+        if self.ultimo_preco is None:
+            return
+            
+        diferenca = preco_atual - self.ultimo_preco
+        if diferenca != 0:
+            variacao = (diferenca / self.ultimo_preco) * 100
+            mensagem = (
+                f"Alteração no preço detectada!\n"
+                f"Preço anterior: R$ {self.ultimo_preco:.2f}\n"
+                f"Preço atual: R$ {preco_atual:.2f}\n"
+                f"Variação: {variacao:.2f}%"
+            )
+            
+            # Notificação desktop
+            self.enviar_notificacao_desktop(
+                "Alteração de Preço - Ryzen 9 7900X",
+                mensagem
+            )
+            
+            # Notificação por email
+            self.enviar_email(
+                "Alteração de Preço - Ryzen 9 7900X",
+                mensagem
+            )
+            
+        # Verificar se atingiu preço alvo
+        if self.config['preco_alvo'] > 0 and preco_atual <= self.config['preco_alvo']:
+            mensagem_alvo = (
+                f"Preço alvo atingido!\n"
+                f"Preço atual: R$ {preco_atual:.2f}\n"
+                f"Preço alvo: R$ {self.config['preco_alvo']:.2f}"
+            )
+            
+            self.enviar_notificacao_desktop(
+                "Preço Alvo Atingido! - Ryzen 9 7900X",
+                mensagem_alvo
+            )
+            
+            self.enviar_email(
+                "Preço Alvo Atingido! - Ryzen 9 7900X",
+                mensagem_alvo
+            )
+    
     def iniciar_navegador(self):
         self.driver = webdriver.Chrome(options=self.options)
         
@@ -54,7 +157,9 @@ class MonitorPrecoKabum:
             preco = self.obter_preco()
             
             if preco:
+                self.verificar_alteracao_preco(preco)
                 self.salvar_dados(preco)
+                self.ultimo_preco = preco
                 print(f"Preço atual: R$ {preco:.2f}")
                 print(f"Dados salvos em: historico_precos.csv")
                 

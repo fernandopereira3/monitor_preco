@@ -1,4 +1,4 @@
-from monitor_preco import MonitorPrecoKabum
+from monitor_preco.monitor_preco import MonitorPrecoKabum
 import time
 import schedule
 
