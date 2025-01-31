@@ -1,0 +1,43 @@
+# Arquivos de configuração com dados sensíveis
+config.json
+*.env
+
+# Arquivos gerados pelo Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Distribuição / empacotamento
+dist/
+build/
+*.egg-info/
+
+# Arquivos de dados gerados
+*.csv
+*.log
+*.sqlite
+*.db
+
+# IDEs e editores
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Arquivos de teste
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Selenium
+geckodriver.log
+chromedriver.log
