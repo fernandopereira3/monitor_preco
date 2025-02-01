@@ -6,8 +6,8 @@ def executar_monitoria():
     monitor = MonitorPrecoKabum()
     monitor.monitorar()
 
-# Agendar execução a cada 1 hora
-schedule.every(1).minutes.do(executar_monitoria)
+# Agendar execução a cada 5 minutos
+schedule.every(5).minutes.do(executar_monitoria)
 
 # Executar imediatamente pela primeira vez
 executar_monitoria()
