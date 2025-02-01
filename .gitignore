@@ -41,3 +41,8 @@ htmlcov/
 # Selenium
 geckodriver.log
 chromedriver.log
+
+# Venv
+bin/
+include/
+lib*/
