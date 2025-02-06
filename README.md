@@ -23,9 +23,9 @@ O Monitor de Preços é uma ferramenta automatizada que permite acompanhar as va
 
 1. Clone o repositório:
 2. Execute o script de inicialização:
-    bash
-    chmod +x start.sh
-    ./start.sh
+   1. bash
+   2. chmod +x start.sh
+   3. ./start.sh
 
 O script `start.sh` irá:
 - Criar e ativar um ambiente virtual Python
