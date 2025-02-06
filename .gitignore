@@ -48,3 +48,4 @@ include/
 lib*/
 lib64/
 lib/
+*.cfg
