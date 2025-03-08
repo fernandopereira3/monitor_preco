@@ -46,6 +46,6 @@ chromedriver.log
 bin/
 include/
 lib*/
-lib64/
+*lib64*
 lib/
 *.cfg
