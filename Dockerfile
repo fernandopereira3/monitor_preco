@@ -8,7 +8,9 @@ COPY requirements.txt .
 COPY . .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y \
+    source ./bin/activate \
+    pip install --no-cache-dir -r requirements.txt
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
