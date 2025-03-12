@@ -9,6 +9,7 @@ COPY . .
 
 # Install dependencies
 RUN cd /app
+RUN sudo apt install python3.12-venv
 RUN sudo python3 -m venv .
 RUN source ./bin/activate
 RUN pip install --no-cache-dir -r requirements.txt
