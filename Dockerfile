@@ -11,8 +11,12 @@ RUN dnf install fedora-workstation-repositories -y
 RUN dnf config-manager setopt google-chrome.enabled=1 -y
 RUN dnf install google-chrome-stable -y
 RUN cd /app 
-RUN source ./bin/activate 
+RUN python3 -m venv $VIRTUAL_ENV
 RUN pip install -r requirements.txt
+
+ENV VIRTUAL_ENV=/app/
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 
 # Run the application
 CMD ["python3", "executar_monitoramento.py"]
