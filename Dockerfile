@@ -8,7 +8,7 @@ COPY requirements.txt .
 COPY . .
 
 # Install dependencies
-RUN apt-get update && apt-get install -y 
+RUN apt-get update
 RUN cd /app
 RUN source ./bin/activate
 RUN pip install --no-cache-dir -r requirements.txt
