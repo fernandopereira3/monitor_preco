@@ -19,9 +19,10 @@ class MonitorPrecoKabum:
         self.options.add_argument('--no-sandbox')
         self.options.add_argument('--disable-dev-shm-usage')
         
-        # URL do produto
+        # URL do produto 1
+        self.url1 = "https://www.kabum.com.br/produto/609952/processador-amd-ryzen-9-9900x-4-4-ghz-5-6-ghz-cache-64-mb-12-nucleos-24-threads-am5-100-100000662wof"
         self.url = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
-        
+
         # Carregar último preço conhecido
         self.ultimo_preco = self.carregar_ultimo_preco()
         
@@ -91,15 +92,9 @@ class MonitorPrecoKabum:
                 f"Variação: {variacao:.2f}%"
             )
             
-            # Notificação desktop
-            self.enviar_notificacao_desktop(
-                "Alteração de Preço - Ryzen 9 7900X",
-                mensagem
-            )
-            
             # Notificação por email
             self.enviar_email(
-                "Alteração de Preço - Ryzen 9 7900X",
+                f"Alteração de Preço",
                 mensagem
             )
             
@@ -111,10 +106,6 @@ class MonitorPrecoKabum:
                 f"Preço alvo: R$ {self.config['preco_alvo']:.2f}"
             )
             
-            self.enviar_notificacao_desktop(
-                "Preço Alvo Atingido! - Ryzen 9 7900X",
-                mensagem_alvo
-            )
             
             self.enviar_email(
                 "Preço Alvo Atingido! - Ryzen 9 7900X",
@@ -133,7 +124,7 @@ class MonitorPrecoKabum:
             
             # Aguardar até que o elemento de preço seja visível
             preco_element = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//h4[contains(@class, 'finalPrice')]"))
+                EC.presence_of_element_located((By.XPATH, "//b [contains(@class, 'regularPrice')]"))
             )
             
             # Extrair o preço
