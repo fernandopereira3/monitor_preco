@@ -7,6 +7,7 @@ WORKDIR /app
 COPY . .
 RUN dnf update  -y
 RUN dnf install python313 -y
+RUN dnf install python3-pip
 RUN dnf install fedora-workstation-repositories -y
 RUN dnf config-manager setopt google-chrome.enabled=1 -y
 RUN dnf install google-chrome-stable -y
