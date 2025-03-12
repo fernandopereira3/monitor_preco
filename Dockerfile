@@ -12,7 +12,7 @@ RUN dnf config-manager setopt google-chrome.enabled=1 -y
 RUN dnf install google-chrome-stable -y
 RUN cd /app 
 RUN python3 -m venv .
-RUN pip install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt
 
 
 # Run the application
