@@ -15,4 +15,4 @@ RUN source ./bin/activate
 RUN pip install -r requirements.txt
 
 # Run the application
-CMD ["python", "executar_monitoramento.py"]
+CMD ["python3", "executar_monitoramento.py"]
