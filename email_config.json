@@ -1,7 +1,0 @@
-{
-    "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587,
-    "email_from": "sap.fernando.pereira@gmail.com",
-    "email_password": "gplk gsoz saed icdt",
-    "email_to": "destinatario@email.com"
-}

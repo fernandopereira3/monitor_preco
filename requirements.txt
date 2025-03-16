@@ -1,4 +1,0 @@
-selenium==4.18.1
-plyer==2.1.0
-schedule==1.2.1
-webdriver-manager==4.0.1
