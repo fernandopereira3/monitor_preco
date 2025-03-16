@@ -2,8 +2,8 @@ version: '3'
 
 services:
   monitor:
-    image: selenium/standalone-chrome:latest
     container_name: fernandopereira3/monitor
+    image: selenium/standalone-chrome:latest
     ports:
       - "4444:4444"
     volumes:
