@@ -20,11 +20,12 @@ class MonitorPrecoKabum:
         self.options.add_argument('--disable-dev-shm-usage')
         
         # URL do produto 1
-        self.url1 = "https://www.kabum.com.br/produto/609952/processador-amd-ryzen-9-9900x-4-4-ghz-5-6-ghz-cache-64-mb-12-nucleos-24-threads-am5-100-100000662wof"
-        self.url = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
+        self.url_pichau = "https://www.pichau.com.br/processador-amd-ryzen-9-7900x-12-core-24-threads-4-7ghz-5-6ghz-turbo-cache-76mb-am5-100-100000589wof"
+        self.url_kabum = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
 
         # Carregar último preço conhecido
         self.ultimo_preco = self.carregar_ultimo_preco()
+        self.ultimo_preco_pichau = self.carregar_pichau()
         
         # Configurações de email (adicione seus dados em config.json)
         self.config = self.carregar_config()
@@ -49,15 +50,17 @@ class MonitorPrecoKabum:
                     return float(linhas[-1][1])
         except (FileNotFoundError, IndexError):
             return None
-            
-    def enviar_notificacao_desktop(self, titulo, mensagem):
-        notification.notify(
-            title=titulo,
-            message=mensagem,
-            app_icon=None,
-            timeout=10,
-        )
         
+    def carregar_pichau(self):
+        try:
+            with open('historico_pichau.csv', 'r') as file:
+                linhas = list(csv.reader(file))
+                if len(linhas) > 0:
+                    return float(linhas[-1][1])
+        except (FileNotFoundError, IndexError):
+            return None
+            
+
     def enviar_email(self, assunto, mensagem):
         if not all([self.config['email_remetente'], 
                    self.config['email_senha'], 
@@ -106,7 +109,6 @@ class MonitorPrecoKabum:
                 f"Preço alvo: R$ {self.config['preco_alvo']:.2f}"
             )
             
-            
             self.enviar_email(
                 "Preço Alvo Atingido! - Ryzen 9 7900X",
                 mensagem_alvo
@@ -118,18 +120,33 @@ class MonitorPrecoKabum:
     def fechar_navegador(self):
         self.driver.quit()
         
+    #OBTER PREÇO KABUM => RETORNA preco
     def obter_preco(self):
         try:
-            self.driver.get(self.url)
+            self.driver.get(self.url_kabum)
             
-            # Aguardar até que o elemento de preço seja visível
+            # Aguardar 10 segundos até que o elemento de preço seja visível
             preco_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, "//b [contains(@class, 'regularPrice')]"))
             )
-            
-            # Extrair o preço
             preco = preco_element.text.replace('R$', '').replace('.', '').replace(',', '.').strip()
             return float(preco)
+            
+        except Exception as e:
+            print(f"Erro ao obter preço: {str(e)}")
+            return None
+        
+    #OBTER PREÇO PICHAU => RETORNA preco_pichau
+    def obter_preco_pichau(self):
+        try:
+            self.driver.get(self.url_pichau)
+            
+            # Aguardar 10 segundos até que o elemento de preço seja visível
+            preco_element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//div [contains(@class, 'jss356')]"))
+            )
+            preco_pichau = preco_element.text.replace('R$', '').replace('.', '').replace(',', '.').strip()
+            return float(preco_pichau)
             
         except Exception as e:
             print(f"Erro ao obter preço: {str(e)}")
@@ -142,10 +159,36 @@ class MonitorPrecoKabum:
             writer = csv.writer(file)
             writer.writerow([timestamp, preco])
             
+    #SALVAR DADOS PICHAU
+    def dados_pichau(self, preco_pichau):
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        with open('historico_pichau.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([timestamp, preco_pichau])
+
+    #MONITORAR PICHAU
+    def monitorar_pichau(self):
+        try:
+            self.iniciar_navegador()
+            preco_pichau = self.obter_preco_pichau()
+            
+            if preco_pichau:
+                self.verificar_alteracao_preco(preco_pichau)
+                self.salvar_dados(preco_pichau)
+                self.ultimo_preco = preco_pichau
+                print(f"Preço atual: R$ {preco_pichau:.2f}")
+                print(f"Dados salvos em: historico_pichau.csv")
+                
+        finally:
+            self.fechar_navegador()
+
+
     def monitorar(self):
         try:
             self.iniciar_navegador()
             preco = self.obter_preco()
+            preco_pichau = self.obter_preco_pichau()
             
             if preco:
                 self.verificar_alteracao_preco(preco)
@@ -153,6 +196,13 @@ class MonitorPrecoKabum:
                 self.ultimo_preco = preco
                 print(f"Preço atual: R$ {preco:.2f}")
                 print(f"Dados salvos em: historico_precos.csv")
+
+            elif preco_pichau:
+                self.verificar_alteracao_preco(preco_pichau)
+                self.salvar_dados(preco_pichau)
+                self.ultimo_preco = preco
+                print(f"Preço atual: R$ {preco_pichau:.2f}")
+                print(f"Dados salvos em: historico_pichau.csv")
                 
         finally:
             self.fechar_navegador()
