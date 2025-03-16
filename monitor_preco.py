@@ -1,162 +1,214 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime
-import csv
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import requests
+from bs4 import BeautifulSoup
 import time
-from plyer import notification
+import logging
 import smtplib
 from email.mime.text import MIMEText
 import json
+import os
+from datetime import datetime
 
-class MonitorPrecoKabum:
-    def __init__(self):
-        # Configurar opções do Chrome
-        self.options = webdriver.ChromeOptions()
-        self.options.add_argument('--headless')  # Executar em modo headless
-        self.options.add_argument('--disable-gpu')
-        self.options.add_argument('--no-sandbox')
-        self.options.add_argument('--disable-dev-shm-usage')
-        
-        # URL do produto 1
-        self.url1 = "https://www.kabum.com.br/produto/609952/processador-amd-ryzen-9-9900x-4-4-ghz-5-6-ghz-cache-64-mb-12-nucleos-24-threads-am5-100-100000662wof"
-        self.url = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
+# Configuração de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("monitor_preco.log"),
+        logging.StreamHandler()
+    ]
+)
 
-        # Carregar último preço conhecido
-        self.ultimo_preco = self.carregar_ultimo_preco()
-        
-        # Configurações de email (adicione seus dados em config.json)
-        self.config = self.carregar_config()
-        
-    def carregar_config(self):
-        try:
-            with open('config.json', 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return {
-                'email_remetente': '',
-                'email_senha': '',
-                'email_destinatario': '',
-                'preco_alvo': 0
+# Arquivo para armazenar os preços anteriores
+PRECOS_ARQUIVO = "precos_anteriores.json"
+
+# Configurações de email
+EMAIL_CONFIG = {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "email_from": "sap.fernando.pereira@gmail.com",
+    "email_password": "gplk gsoz saed icdt",  # Use uma senha de aplicativo para Gmail
+    "email_to": "destinatario@email.com"
+}
+
+def carregar_produtos():
+    """Carrega a lista de produtos a serem monitorados de um arquivo JSON."""
+    try:
+        with open("produtos.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error("Arquivo produtos.json não encontrado.")
+        # Criar um arquivo de exemplo
+        produtos_exemplo = [
+            {
+                "nome": "Exemplo de Produto",
+                "url": "https://www.exemplo.com/produto",
+                "seletor_preco": ".preco-produto"
             }
+        ]
+        with open("produtos.json", "w", encoding="utf-8") as f:
+            json.dump(produtos_exemplo, f, indent=4, ensure_ascii=False)
+        logging.info("Arquivo produtos.json de exemplo criado. Por favor, edite-o com seus produtos.")
+        return produtos_exemplo
+    except json.JSONDecodeError:
+        logging.error("Erro ao decodificar o arquivo produtos.json. Verifique se o formato está correto.")
+        return []
+
+def carregar_precos_anteriores():
+    """Carrega os preços anteriores do arquivo JSON."""
+    try:
+        with open(PRECOS_ARQUIVO, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def salvar_precos_anteriores(precos):
+    """Salva os preços atuais no arquivo JSON."""
+    with open(PRECOS_ARQUIVO, "w", encoding="utf-8") as f:
+        json.dump(precos, f, indent=4, ensure_ascii=False)
+
+def obter_preco(url, seletor_preco):
+    """Obtém o preço de um produto a partir da URL e do seletor CSS."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
     
-    def carregar_ultimo_preco(self):
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()  # Levanta exceção para códigos de erro HTTP
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        elemento_preco = soup.select_one(seletor_preco)
+        
+        if not elemento_preco:
+            logging.warning(f"Seletor de preço '{seletor_preco}' não encontrado na página {url}")
+            return None
+        
+        # Limpa o texto do preço (remove espaços, símbolos de moeda, etc.)
+        preco_texto = elemento_preco.text.strip()
+        preco_limpo = ''.join(filter(lambda x: x.isdigit() or x == ',', preco_texto))
+        preco_limpo = preco_limpo.replace(',', '.')
+        
         try:
-            with open('historico_precos.csv', 'r') as file:
-                linhas = list(csv.reader(file))
-                if len(linhas) > 0:
-                    return float(linhas[-1][1])
-        except (FileNotFoundError, IndexError):
+            return float(preco_limpo)
+        except ValueError:
+            logging.warning(f"Não foi possível converter o preço '{preco_texto}' para float")
             return None
             
-    def enviar_notificacao_desktop(self, titulo, mensagem):
-        notification.notify(
-            title=titulo,
-            message=mensagem,
-            app_icon=None,
-            timeout=10,
-        )
+    except requests.RequestException as e:
+        logging.error(f"Erro ao acessar {url}: {e}")
+        return None
+
+def enviar_email(assunto, mensagem):
+    """Envia um email de notificação."""
+    try:
+        msg = MIMEText(mensagem)
+        msg['Subject'] = assunto
+        msg['From'] = EMAIL_CONFIG["email_from"]
+        msg['To'] = EMAIL_CONFIG["email_to"]
         
-    def enviar_email(self, assunto, mensagem):
-        if not all([self.config['email_remetente'], 
-                   self.config['email_senha'], 
-                   self.config['email_destinatario']]):
-            return
-            
-        try:
-            msg = MIMEText(mensagem)
-            msg['Subject'] = assunto
-            msg['From'] = self.config['email_remetente']
-            msg['To'] = self.config['email_destinatario']
-            
-            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-            server.login(self.config['email_remetente'], self.config['email_senha'])
-            server.send_message(msg)
-            server.quit()
-            
-        except Exception as e:
-            print(f"Erro ao enviar email: {str(e)}")
+        server = smtplib.SMTP(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"])
+        server.starttls()
+        server.login(EMAIL_CONFIG["email_from"], EMAIL_CONFIG["email_password"])
+        server.send_message(msg)
+        server.quit()
+        
+        logging.info(f"Email enviado: {assunto}")
+        return True
+    except Exception as e:
+        logging.error(f"Erro ao enviar email: {e}")
+        return False
+
+def monitorar_precos():
+    """Função principal para monitorar os preços dos produtos."""
+    produtos = carregar_produtos()
+    precos_anteriores = carregar_precos_anteriores()
+    precos_atualizados = {}
     
-    def verificar_alteracao_preco(self, preco_atual):
-        if self.ultimo_preco is None:
-            return
-            
-        diferenca = preco_atual - self.ultimo_preco
-        if diferenca != 0:
-            variacao = (diferenca / self.ultimo_preco) * 100
-            mensagem = (
-                f"Alteração no preço detectada!\n"
-                f"Preço anterior: R$ {self.ultimo_preco:.2f}\n"
-                f"Preço atual: R$ {preco_atual:.2f}\n"
-                f"Variação: {variacao:.2f}%"
-            )
-            
-            # Notificação por email
-            self.enviar_email(
-                f"Alteração de Preço",
-                mensagem
-            )
-            
-        # Verificar se atingiu preço alvo
-        if self.config['preco_alvo'] > 0 and preco_atual <= self.config['preco_alvo']:
-            mensagem_alvo = (
-                f"Preço alvo atingido!\n"
-                f"Preço atual: R$ {preco_atual:.2f}\n"
-                f"Preço alvo: R$ {self.config['preco_alvo']:.2f}"
-            )
-            
-            
-            self.enviar_email(
-                "Preço Alvo Atingido! - Ryzen 9 7900X",
-                mensagem_alvo
-            )
-    
-    def iniciar_navegador(self):
-        self.driver = webdriver.Chrome(options=self.options)
+    for produto in produtos:
+        nome = produto["nome"]
+        url = produto["url"]
+        seletor = produto["seletor_preco"]
         
-    def fechar_navegador(self):
-        self.driver.quit()
+        logging.info(f"Verificando preço de: {nome}")
         
-    def obter_preco(self):
-        try:
-            self.driver.get(self.url)
-            
-            # Aguardar até que o elemento de preço seja visível
-            preco_element = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//b [contains(@class, 'regularPrice')]"))
-            )
-            
-            # Extrair o preço
-            preco = preco_element.text.replace('R$', '').replace('.', '').replace(',', '.').strip()
-            return float(preco)
-            
-        except Exception as e:
-            print(f"Erro ao obter preço: {str(e)}")
-            return None
-            
-    def salvar_dados(self, preco):
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        preco_atual = obter_preco(url, seletor)
+        if preco_atual is None:
+            logging.warning(f"Não foi possível obter o preço de {nome}")
+            continue
         
-        with open('historico_precos.csv', 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([timestamp, preco])
+        precos_atualizados[nome] = {
+            "preco": preco_atual,
+            "url": url,
+            "ultima_verificacao": datetime.now().isoformat()
+        }
+        
+        # Verifica se o preço mudou
+        if nome in precos_anteriores:
+            preco_anterior = precos_anteriores[nome]["preco"]
             
-    def monitorar(self):
-        try:
-            self.iniciar_navegador()
-            preco = self.obter_preco()
-            
-            if preco:
-                self.verificar_alteracao_preco(preco)
-                self.salvar_dados(preco)
-                self.ultimo_preco = preco
-                print(f"Preço atual: R$ {preco:.2f}")
-                print(f"Dados salvos em: historico_precos.csv")
+            if preco_atual < preco_anterior:
+                diferenca = preco_anterior - preco_atual
+                percentual = (diferenca / preco_anterior) * 100
                 
-        finally:
-            self.fechar_navegador()
+                mensagem = f"""
+                O preço de {nome} diminuiu!
+                
+                Preço anterior: R$ {preco_anterior:.2f}
+                Preço atual: R$ {preco_atual:.2f}
+                Economia: R$ {diferenca:.2f} ({percentual:.2f}%)
+                
+                Confira em: {url}
+                """
+                
+                enviar_email(f"Alerta de Preço: {nome} está mais barato!", mensagem)
+            
+            elif preco_atual > preco_anterior:
+                diferenca = preco_atual - preco_anterior
+                percentual = (diferenca / preco_anterior) * 100
+                
+                logging.info(f"Preço de {nome} aumentou: R$ {preco_anterior:.2f} → R$ {preco_atual:.2f} (+{percentual:.2f}%)")
+            
+            else:
+                logging.info(f"Preço de {nome} manteve-se em R$ {preco_atual:.2f}")
+        
+        else:
+            logging.info(f"Primeiro registro de preço para {nome}: R$ {preco_atual:.2f}")
+    
+    # Salva os preços atualizados
+    salvar_precos_anteriores(precos_atualizados)
+
+def main():
+    """Função principal que executa o monitoramento periodicamente."""
+    try:
+        logging.info("Iniciando monitoramento de preços")
+        
+        # Verifica se o arquivo de configuração de email existe
+        if not os.path.exists("email_config.json"):
+            with open("email_config.json", "w", encoding="utf-8") as f:
+                json.dump(EMAIL_CONFIG, f, indent=4, ensure_ascii=False)
+            logging.info("Arquivo email_config.json criado. Por favor, configure suas credenciais de email.")
+        
+        # Carrega configurações de email
+        try:
+            with open("email_config.json", "r", encoding="utf-8") as f:
+                email_config = json.load(f)
+                for key, value in email_config.items():
+                    EMAIL_CONFIG[key] = value
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.warning(f"Erro ao carregar configurações de email: {e}")
+        
+        # Executa o monitoramento uma vez
+        monitorar_precos()
+        
+        logging.info("Monitoramento concluído com sucesso")
+        
+    except KeyboardInterrupt:
+        logging.info("Monitoramento interrompido pelo usuário")
+    except Exception as e:
+        logging.error(f"Erro não tratado: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    monitor = MonitorPrecoKabum()
-    monitor.monitorar() 
+    main()
