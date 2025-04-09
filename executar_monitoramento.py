@@ -1,4 +1,5 @@
 from monitor_preco import MonitorPrecoKabum
+from monitor_preco import enviar_email
 import time
 import schedule
 
@@ -11,6 +12,7 @@ schedule.every(1).minutes.do(executar_monitoria)
 
 # Executar imediatamente pela primeira vez
 executar_monitoria()
+enviar_email()
 
 # Manter o script rodando
 while True:

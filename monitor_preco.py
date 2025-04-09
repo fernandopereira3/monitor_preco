@@ -20,8 +20,7 @@ class MonitorPrecoKabum:
         self.options.add_argument('--disable-dev-shm-usage')
         
         # URL do produto 1
-        self.url1 = "https://www.kabum.com.br/produto/609952/processador-amd-ryzen-9-9900x-4-4-ghz-5-6-ghz-cache-64-mb-12-nucleos-24-threads-am5-100-100000662wof"
-        self.url = "https://www.kabum.com.br/produto/378412/processador-amd-ryzen-9-7900x-5-6ghz-max-turbo-cache-76mb-am5-12-nucleos-video-integrado-100-100000589wof"
+        self.url = "https://www.kabum.com.br/produto/694714/placa-de-video-asrock-rx-9070-challenger-amd-radeon-led-16gb-gddr6-fidelityfx-rdna-90-ga5nzz-00uanf"
 
         # Carregar último preço conhecido
         self.ultimo_preco = self.carregar_ultimo_preco()
@@ -86,7 +85,7 @@ class MonitorPrecoKabum:
         if diferenca != 0:
             variacao = (diferenca / self.ultimo_preco) * 100
             mensagem = (
-                f"Alteração no preço detectada!\n"
+                f"Alteração no preço da Placa de Video!\n"
                 f"Preço anterior: R$ {self.ultimo_preco:.2f}\n"
                 f"Preço atual: R$ {preco_atual:.2f}\n"
                 f"Variação: {variacao:.2f}%"
@@ -108,7 +107,7 @@ class MonitorPrecoKabum:
             
             
             self.enviar_email(
-                "Preço Alvo Atingido! - Ryzen 9 7900X",
+                "Preço Alvo Atingido!",
                 mensagem_alvo
             )
     
