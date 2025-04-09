@@ -77,6 +77,7 @@ class MonitorPrecoKabum:
         except Exception as e:
             print(f"Erro ao enviar email: {str(e)}")
     
+    
     def verificar_alteracao_preco(self, preco_atual):
         if self.ultimo_preco is None:
             return
