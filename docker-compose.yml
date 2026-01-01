@@ -2,7 +2,7 @@ version: '3'
 
 services:
   monitor:
-    container_name: fernandopereira3/monitor
+    container_name: img
     image: selenium/standalone-chrome:latest
     ports:
       - "4444:4444"

@@ -20,7 +20,7 @@ class MonitorPrecoKabum:
         self.options.add_argument('--disable-dev-shm-usage')
         
         # URL do produto 1
-        self.url = "https://www.kabum.com.br/produto/694714/placa-de-video-asrock-rx-9070-challenger-amd-radeon-led-16gb-gddr6-fidelityfx-rdna-90-ga5nzz-00uanf"
+        self.url = "https://www.kabum.com.br/produto/725947/placa-de-video-xfx-swift-rx-9070-xt-triple-fan-gaming-edition-with-amd-radeon-16gb-gddr6-hdmi-3xdp-rdna-4-rx-97tswf3b9"
 
         # Carregar último preço conhecido
         self.ultimo_preco = self.carregar_ultimo_preco()
@@ -126,8 +126,9 @@ class MonitorPrecoKabum:
             
             # Aguardar até que o elemento de preço seja visível
             preco_element = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//b [contains(@class, 'regularPrice')]"))
+                EC.presence_of_element_located((By.XPATH, "//*[@id='main-content']/div[1]/div[1]/div[1]/div[3]/div[3]/div[2]/span/b[1]"))
             )
+            #//*[@id="main-content"]/div[1]/div[1]/div[1]/div[3]/div[3]/div[2]/span/b[1]
             
             # Extrair o preço
             preco = preco_element.text.replace('R$', '').replace('.', '').replace(',', '.').strip()
