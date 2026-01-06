@@ -141,7 +141,7 @@ class MonitorPrecoKabum:
     def salvar_dados(self, preco):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        with open('historico_precos.csv', 'a', newline='') as file:
+        with open('./data/historico_precos.csv', 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, preco])
             

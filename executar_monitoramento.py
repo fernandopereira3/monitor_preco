@@ -37,7 +37,7 @@ def start():
 
 
 # Agendar execução a cada 5 minutos
-schedule.every(1).minutes.do(executar_monitoria)
+schedule.every(5).minutes.do(executar_monitoria)
 
 # Executar imediatamente pela primeira vez
 executar_monitoria()
