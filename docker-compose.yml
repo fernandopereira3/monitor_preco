@@ -5,4 +5,4 @@ services:
     container_name: monitor_preco
     build: .
     volumes:
-      - .:/app
+      - /mnt/Programas/Programas/dockerVol:/app/data
